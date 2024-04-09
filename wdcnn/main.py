@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from data.cwru import build_dataset
 from engine1 import evaluate, train_one_epoch
-from model import build_model
+from WDCNN import build_model
 from util.criterion import create_optimizer
 from util.model_save import save_model
 

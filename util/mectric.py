@@ -2,8 +2,20 @@ import os
 
 import pandas as pd
 from datetime import datetime
-
+import torch
 import pandas as pd
+
+
+def accuracy(outputs, labels):
+    """
+    Compute the accuracy
+    outputs, labels: (tensor)
+    return: (float) accuracy in [0, 100]
+    """
+    pre = torch.max(outputs.cpu(), 1)[1].numpy()
+    y = labels.cpu().numpy()
+    acc = (pre == y).sum() / len(y)
+    return acc
 
 
 class ExcelWriter:

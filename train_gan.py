@@ -8,9 +8,10 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
+
 from data.cwru import build_transfer_task
-from engine import evaluate, train_one_epoch_with_mmd
-from model.WDCNN import build_model
+from engine import evaluate_gan, train_one_epoch_on_gan
+from model.GAN import build_model
 from util.criterion import create_optimizer
 from util.mectric import ExcelWriter
 from util.model_save import save_model
@@ -38,13 +39,16 @@ def main(args):
     random.seed(seed)
     # =================================================================
     # 模型
-    model = build_model(args)
+    feature_net, classifier, discriminator = build_model(args)
     parameter_list = [
-        {"params": model.parameters(), "lr": args.lr},
+        {"params": feature_net.parameters(), "lr": 0.5 * args.lr},
+        {"params": classifier.parameters(), "lr": 1 * args.lr},
+        {"params": discriminator.parameters(), "lr": 1 * args.lr},
     ]
     # Define optimizer and learning rate decay
     optimizer, lr_scheduler = create_optimizer(args, parameter_list)
-    criterion = nn.CrossEntropyLoss()
+    cls_criterion = nn.CrossEntropyLoss()
+    adver_criterion = nn.BCELoss()
     # =================================================================
     # 数据
     source_train_set, source_val_set, taregt_train_set, target_val_set = (
@@ -67,35 +71,48 @@ def main(args):
     acc_lists, losses_lists, cls_loss_lists, adver_loss_lists = [], [], [], []
     for epoch in tqdm(range(args.start_epoch, args.epochs)):
         # 训练
-        acc_list, losses_list, cls_loss_list, adver_loss_list = (
-            train_one_epoch_with_mmd(
-                model,
-                criterion,
-                source_train_loader,
-                target_train_loader,
-                optimizer,
-                device,
-                epoch,
-                args.clip_max_norm,
-            )
+        acc_list, losses_list, cls_loss_list, adver_loss_list = train_one_epoch_on_gan(
+            feature_net,
+            classifier,
+            discriminator,
+            cls_criterion,
+            adver_criterion,
+            source_train_loader,
+            target_train_loader,
+            optimizer,
+            device,
+            epoch,
+            args.clip_max_norm,
         )
         # 训练准确率和损失
         acc_lists.extend(acc_list)
         losses_lists.extend(losses_list)
         cls_loss_lists.extend(cls_loss_list)
         adver_loss_lists.extend(adver_loss_list)
-
-    # 验证准确率
-    source_acc = evaluate(model, source_val_loader, device)
-    target_acc = evaluate(model, target_val_loader, device)
-    plot_curve(acc_lists, title="accuracy ", xlabel="X", ylabel="Y")
-    plot_curve(losses_lists, title="loss", xlabel="X", ylabel="Y")
+    source_acc = evaluate_gan(feature_net, classifier, source_val_loader, device)
+    target_acc = evaluate_gan(feature_net, classifier, target_val_loader, device)
+    plot_curve(
+        acc_lists,
+        f"gan-mmd-{args.task}-acc",
+        title="accuracy ",
+        xlabel="X",
+        ylabel="Y",
+    )
+    plot_curve(
+        losses_lists, f"gan-mmd-{args.task}-loss", title="loss", xlabel="X", ylabel="Y"
+    )
     print("\033[0m源域验证准确率:", source_acc)
     print("\033[1;31m目标域验证准确率:", target_acc)
 
     # =================================================================
     # 保存
-    save_model(model, args.save_dir)
+    torch.save(
+        {
+            "feature_net": feature_net.state_dict(),
+            "classifier": classifier.state_dict(),
+        },
+        os.path.join(args.save_dir, day_time + ".pth"),
+    )
     # =================================================================
     return target_acc
 
@@ -127,6 +144,7 @@ def train_loop(loop_num=1):
 
 
 if __name__ == "__main__":
+    day_time = datetime.now().strftime("%Y-%m-%d_%H_%M")
     parser = argparse.ArgumentParser(
         "WDCNN training and evaluation script", parents=[get_args_parser()]
     )
@@ -138,4 +156,4 @@ if __name__ == "__main__":
     acc = main(args)
     with open("output.txt", "a") as f:
         # 重定向 print 的输出到文件
-        print(f"wdcnn-mmd-{args.task}:{acc}", file=f)
+        print(f"gan-{args.task}:{acc}", file=f)

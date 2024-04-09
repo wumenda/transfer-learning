@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from data.cwru import build_test
 from engine import evaluate
-from model import load_model
+from WDCNN import load_model
 from util.mectric import ExcelWriter
 
 # 忽略UserWarning警告

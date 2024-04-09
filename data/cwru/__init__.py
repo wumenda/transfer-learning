@@ -6,6 +6,8 @@ from tqdm import tqdm
 
 from util.transforms import compute_fft
 
+__cwru_class__ = ["N", "F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"]
+
 
 class Crwu(Dataset):
     def __init__(
@@ -95,8 +97,9 @@ class Crwu(Dataset):
 
 
 def build_dataset(args):
+    source_root = os.path.join(args.root, f"{args.task.split('-')[0]}HP")
     cwru = Crwu(
-        args.root,
+        source_root,
         args.num_classes,
         args.sample_num,
         args.sample_length,
