@@ -19,6 +19,12 @@ def get_args_parser():
         "--clip_max_norm", default=0.1, type=float, help="gradient clipping max norm"
     )
 
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        default=r"latest.path",
+    )
+
     # dataset parameters
     parser.add_argument("--root", type=str, default=r"data/cwru")
     parser.add_argument("--task", type=str, default=r"0-3")
@@ -34,6 +40,11 @@ def get_args_parser():
     parser.add_argument(
         "--output_dir",
         default=f"output/{day_time}",
+        help="path where to save, empty for no saving",
+    )
+    parser.add_argument(
+        "--figure_path",
+        default=f"figure/gan",
         help="path where to save, empty for no saving",
     )
     parser.add_argument(

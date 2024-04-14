@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data.cwru import build_transfer_task
-from engine import evaluate_gan, train_one_epoch_on_gan_with_mmd
-from model.GAN import build_model
+from engine import evaluate_gan, train_one_epoch_on_gan_with_mmd_pseudo_label
+from model.GAN import build_model, load_model
 from util.criterion import create_optimizer
 from util.mectric import ExcelWriter
 from util.model_save import save_model
@@ -40,8 +40,9 @@ def main(args):
     # =================================================================
     # 模型
     feature_net, classifier, discriminator = build_model(args)
+    pre_train_feature_net, pre_train_classifier = load_model(args)
     parameter_list = [
-        {"params": feature_net.parameters(), "lr": 0.5 * args.lr},
+        {"params": feature_net.parameters(), "lr": 0.1 * args.lr},
         {"params": classifier.parameters(), "lr": 1 * args.lr},
         {"params": discriminator.parameters(), "lr": 1 * args.lr},
     ]
@@ -72,10 +73,12 @@ def main(args):
     for epoch in tqdm(range(args.start_epoch, args.epochs)):
         # 训练
         acc_list, losses_list, cls_loss_list, adver_loss_list = (
-            train_one_epoch_on_gan_with_mmd(
+            train_one_epoch_on_gan_with_mmd_pseudo_label(
                 feature_net,
                 classifier,
                 discriminator,
+                pre_train_feature_net,
+                pre_train_classifier,
                 cls_criterion,
                 adver_criterion,
                 source_train_loader,
@@ -96,27 +99,27 @@ def main(args):
         classifier,
         source_val_loader,
         device,
-        os.path.join(args.figure_path, "source-matrix-gan-mmd"),
-        os.path.join(args.figure_path, "source-tsne-gan-mmd"),
+        os.path.join(args.figure_path, "source-matrix-gan-mmd-pseudo-albel"),
+        os.path.join(args.figure_path, "source-tsne-gan-mmd-pseudo-albel"),
     )
     target_acc = evaluate_gan(
         feature_net,
         classifier,
         target_val_loader,
         device,
-        os.path.join(args.figure_path, "target-matrix-gan-mmd"),
-        os.path.join(args.figure_path, "target-tsne-gan-mmd"),
+        os.path.join(args.figure_path, "target-matrix-gan-mmd-pseudo-albel"),
+        os.path.join(args.figure_path, "target-tsne-gan-mmd-pseudo-albel"),
     )
     plot_curve(
         acc_lists,
-        os.path.join(args.figure_path, "gan-mmd-acc"),
+        os.path.join(args.figure_path, "gan-mmd-pseudo-albel-acc"),
         title="accuracy ",
         xlabel="X",
         ylabel="Y",
     )
     plot_curve(
         losses_lists,
-        os.path.join(args.figure_path, "gan-mmd-loss"),
+        os.path.join(args.figure_path, "gan-mmd-pseudo-albel-loss"),
         title="loss",
         xlabel="X",
         ylabel="Y",
@@ -131,7 +134,7 @@ def main(args):
             "feature_net": feature_net.state_dict(),
             "classifier": classifier.state_dict(),
         },
-        os.path.join(args.save_dir, day_time + ".pth"),
+        os.path.join(args.save_dir, "gan-mmd-pseudo-label" + ".pth"),
     )
     # =================================================================
     return target_acc
@@ -173,7 +176,9 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
-    args.figure_path = "figure/gan-mmd"
+    args.lr = 1e-2
+    args.figure_path = "figure/gan-mmd-pseudo-albel"
+    args.model_path = r"checkpoints\2024-04-13_16_59.pth"
     acc = main(args)
     with open("output.txt", "a") as f:
         # 重定向 print 的输出到文件

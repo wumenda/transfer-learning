@@ -21,4 +21,4 @@ plt.plot(
 )
 
 plt.legend()
-plt.show()
+# plt.show()()

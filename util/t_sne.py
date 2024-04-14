@@ -1,40 +1,70 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+import scienceplots
+from matplotlib.font_manager import FontProperties
+
+font = FontProperties(fname="C:/Windows/Fonts/simhei.ttf", size=12)
+
+plt.style.use("science")
 
 
-def plot_sne(data, labels):
-    # 使用t-SNE对数据进行降维
+def plot_sne(data, labels, savepath=""):
+    # Using t-SNE to reduce dimensionality
     tsne = TSNE(n_components=2, random_state=0)
     data_tsne = tsne.fit_transform(data)
-    # 创建一个新的图形
-    fig = plt.figure(figsize=(8, 8))
+
+    # Create a new figure
+    fig = plt.figure(figsize=(6, 6))
     fig.patch.set_alpha(0.7)
-    # 绘制 x=0 和 y=0 的虚线
-    plt.axhline(0, color="gray", linestyle="dashed")
-    plt.axvline(0, color="gray", linestyle="dashed")
-    # 获取唯一的标签值
+    ax = fig.add_subplot(111)
+
+    # Plot dashed lines at x=0 and y=0
+    plt.axhline(0, color="gray", linestyle="dashed", linewidth=0.5)
+    plt.axvline(0, color="gray", linestyle="dashed", linewidth=0.5)
+
+    # Get unique label values
     unique_labels = np.unique(labels)
-    # 为每个标签分配不同的颜色
-    # colors = plt.cm.tab20c(np.linspace(0, 1, len(unique_labels)))
-    colors = plt.cm.Set3(np.linspace(0, 1, len(unique_labels)))
-    # 绘制不同颜色的数据点
+
+    # Assign different colors and shapes for each label
+    colors = plt.cm.tab10(np.linspace(0, 1, len(unique_labels)))
+    markers = ["o", "s", "^", "x", "D", "P", "*", "h", "+", "v"]  # Define marker shapes
+
+    # Plot data points with different colors and shapes
     for i, label in enumerate(unique_labels):
         mask = labels == label
-        plt.scatter(
+        ax.scatter(
             data_tsne[mask, 0],
             data_tsne[mask, 1],
-            s=5,
+            s=20,  # Adjust size of points
             label=f"Label {label}",
             color=colors[i],
+            marker=markers[i % len(markers)],  # Cycle through markers
+            edgecolor="black",  # Add black edges to markers
+            linewidth=0.5,  # Set edge linewidth
+            alpha=0.7,  # Set transparency
         )
-    plt.title("t-SNE Visualization")
-    plt.legend(
-        loc="upper right",
-        fontsize="small",
-        ncol=2,
-        frameon=True,
-    )
+
+    # Set title and legend
+    plt.title("t-SNE Visualization", fontsize=14)
+    plt.legend(loc="upper right", fontsize=8, frameon=False, markerscale=1.5)
+
+    # Set grid style
+    plt.grid(True, linestyle="--", alpha=0.5)
+
+    # Set axis labels and ticks
+    ax.set_xlabel("t-SNE Component 1", fontsize=10)
+    ax.set_ylabel("t-SNE Component 2", fontsize=10)
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
+
+    # Remove top and right spines
+    # ax.spines["top"].set_visible(False)
+    # ax.spines["right"].set_visible(False)
+
+    plt.tight_layout()
+    plt.savefig(savepath, bbox_inches="tight")
+    # plt.show()()
 
 
 def plot(data, labels):
@@ -46,7 +76,7 @@ def plot(data, labels):
     plt.colorbar()
     plt.title("t-SNE Visualization of Prediction")
     plt.legend()
-    plt.show()
+    # plt.show()()
 
 
 # 示例用法

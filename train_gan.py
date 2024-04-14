@@ -54,6 +54,9 @@ def main(args):
     source_train_set, source_val_set, taregt_train_set, target_val_set = (
         build_transfer_task(args)
     )
+    lemn = len(source_train_set)
+    len_source = len(source_val_set)
+    len_target = len(target_val_set)
     source_train_loader = DataLoader(
         dataset=source_train_set, batch_size=args.batch_size, shuffle=True
     )
@@ -89,18 +92,38 @@ def main(args):
         losses_lists.extend(losses_list)
         cls_loss_lists.extend(cls_loss_list)
         adver_loss_lists.extend(adver_loss_list)
-    source_acc = evaluate_gan(feature_net, classifier, source_val_loader, device)
-    target_acc = evaluate_gan(feature_net, classifier, target_val_loader, device)
+    # 验证准确率 6个图
+    source_acc = evaluate_gan(
+        feature_net,
+        classifier,
+        source_val_loader,
+        device,
+        os.path.join(args.figure_path, "source-matrix-gan"),
+        os.path.join(args.figure_path, "source-tsne-gan"),
+    )
+    target_acc = evaluate_gan(
+        feature_net,
+        classifier,
+        target_val_loader,
+        device,
+        os.path.join(args.figure_path, "target-matrix-gan"),
+        os.path.join(args.figure_path, "target-tsne-gan"),
+    )
     plot_curve(
         acc_lists,
-        f"gan-mmd-{args.task}-acc",
+        os.path.join(args.figure_path, "gan-acc"),
         title="accuracy ",
         xlabel="X",
         ylabel="Y",
     )
     plot_curve(
-        losses_lists, f"gan-mmd-{args.task}-loss", title="loss", xlabel="X", ylabel="Y"
+        losses_lists,
+        os.path.join(args.figure_path, "gan-loss"),
+        title="loss",
+        xlabel="X",
+        ylabel="Y",
     )
+
     print("\033[0m源域验证准确率:", source_acc)
     print("\033[1;31m目标域验证准确率:", target_acc)
 
@@ -153,6 +176,7 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
+    args.figure_path = "figure/gan"
     acc = main(args)
     with open("output.txt", "a") as f:
         # 重定向 print 的输出到文件

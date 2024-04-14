@@ -169,3 +169,21 @@ def build_model(args):
     discriminator.apply(init_weights)  # 对网络进行初始化
     discriminator.to(device)
     return feature_net, classifier, discriminator
+
+
+def load_model(args):
+    device = args.device
+    # Initialize network instances
+    feature_net = CnnFeatureNet(args.sample_length, args.channels)
+    classifier = Classifier(args.num_classes)
+
+    # Load saved model parameters
+    checkpoint = torch.load(args.model_path)
+    feature_net.load_state_dict(checkpoint["feature_net"])
+    classifier.load_state_dict(checkpoint["classifier"])
+
+    # Move models to the desired device
+    feature_net.to(device)
+    classifier.to(device)
+
+    return feature_net, classifier

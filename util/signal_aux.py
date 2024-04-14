@@ -25,7 +25,7 @@ def plot_signal_spectrum(signal, sample_rate):
     plt.ylabel("Magnitude Spectrum")
     plt.title("Signal Spectrum")
     plt.grid(True)
-    plt.show()
+    # plt.show()()
 
 
 def wavelet_transform(signal, wavelet="db4", level=5):
@@ -70,6 +70,6 @@ plt.colorbar()
 plt.title("Wavelet Transform: Time-Frequency Image")
 plt.xlabel("Time")
 plt.ylabel("Scale")
-plt.show()
+# plt.show()()
 
 plot_signal_spectrum(signal, 100)

@@ -33,11 +33,11 @@ plt.colorbar()
 plt.title("Continuous Wavelet Coefficients")
 plt.xlabel("Time")
 plt.ylabel("Scale")
-plt.show()
+# plt.show()()
 
 # 可视化频率谱
 plt.plot(freqs, np.abs(coefs.mean(axis=1)), "b")
 plt.title("Average Power Spectrum")
 plt.xlabel("Frequency")
 plt.ylabel("Power")
-plt.show()
+# plt.show()()

@@ -85,11 +85,35 @@ def main(args):
         cls_loss_lists.extend(cls_loss_list)
         adver_loss_lists.extend(adver_loss_list)
 
-    # 验证准确率
-    source_acc = evaluate(model, source_val_loader, device)
-    target_acc = evaluate(model, target_val_loader, device)
-    plot_curve(acc_lists, title="accuracy ", xlabel="X", ylabel="Y")
-    plot_curve(losses_lists, title="loss", xlabel="X", ylabel="Y")
+    # 验证准确率 6个图
+    source_acc = evaluate(
+        model,
+        source_val_loader,
+        device,
+        os.path.join(args.figure_path, "source-matrix-wdcnn"),
+        os.path.join(args.figure_path, "source-tsne-wdcnn"),
+    )
+    target_acc = evaluate(
+        model,
+        target_val_loader,
+        device,
+        os.path.join(args.figure_path, "target-matrix-wdcnn"),
+        os.path.join(args.figure_path, "target-tsne-wdcnn"),
+    )
+    plot_curve(
+        acc_lists,
+        os.path.join(args.figure_path, "wdcnn-acc"),
+        title="accuracy ",
+        xlabel="X",
+        ylabel="Y",
+    )
+    plot_curve(
+        losses_lists,
+        os.path.join(args.figure_path, "wdcnn-loss"),
+        title="loss",
+        xlabel="X",
+        ylabel="Y",
+    )
     print("\033[0m源域验证准确率:", source_acc)
     print("\033[1;31m目标域验证准确率:", target_acc)
 
