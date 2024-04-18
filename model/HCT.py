@@ -42,6 +42,9 @@ class CnnFeatureNet(nn.Module):
             nn.Flatten(),
             nn.Linear(input_size // 8, 64),
             nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -55,7 +58,6 @@ class CnnFeatureNet(nn.Module):
 
 
 class TransformerNet(nn.Module):
-
     def __init__(
         self,
         input_size,
@@ -71,12 +73,18 @@ class TransformerNet(nn.Module):
             input_size, transformer_dim
         )
         self.transformer_layer = nn.TransformerEncoderLayer(
-            d_model=transformer_dim, dim_feedforward=512, nhead=transformer_heads
+            d_model=transformer_dim, dim_feedforward=256, nhead=transformer_heads
         )
         self.transformer = nn.TransformerEncoder(
             self.transformer_layer, num_layers=transformer_layers
         )
-        self.mlp = nn.Sequential(nn.Linear(self.transformer_dim, 64), nn.ReLU())
+        self.mlp = nn.Sequential(
+            nn.Linear(self.transformer_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Sigmoid(),
+        )
 
         # 添加一个新的向量作为输入
         self.new_vector = nn.Parameter(torch.zeros(1, 1, transformer_dim))
@@ -149,9 +157,21 @@ class TransformerWithConv(nn.Module):
 class Classifier(nn.Module):
     def __init__(self, num_out=10):
         super(Classifier, self).__init__()
-        self.head = nn.Sequential(nn.Linear(64, num_out, nn.Dropout(0.5)))
+        self.head = nn.Sequential(nn.Linear(64, num_out))
 
     def forward(self, logits):
+        outputs = self.head(logits)
+        return outputs
+
+
+class MergeClassifier(nn.Module):
+    def __init__(self, num_out=10):
+        super(MergeClassifier, self).__init__()
+        self.sigmoid = nn.Sigmoid()
+        self.head = nn.Sequential(nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, num_out))
+
+    def forward(self, logits):
+        logits = self.sigmoid(logits)
         outputs = self.head(logits)
         return outputs
 
@@ -164,7 +184,7 @@ class Discriminator(nn.Module):
     ):
         super(Discriminator, self).__init__()
         self.domain_classifier = nn.Sequential(
-            nn.Linear(64, 128, nn.Dropout(0.5)),
+            nn.Linear(128, 128, nn.Dropout(0.5)),
             nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.Linear(128, num_out),
@@ -219,33 +239,55 @@ def init_weights(m):
 
 def build_model(args):
     device = torch.device(args.device)
-    feature_net = CnnFeatureNet(args.sample_length, args.channels)
-    classifier = Classifier(
+    cnn_feature_net = CnnFeatureNet(args.sample_length, args.channels)
+    transformer_feature_net = TransformerNet(args.sample_length, args.channels)
+    classifier4cnn = Classifier(
+        args.num_classes,
+    )
+    classifier4transformer = Classifier(
+        args.num_classes,
+    )
+    classifier4merge = MergeClassifier(
         args.num_classes,
     )
     discriminator = Discriminator()
-    feature_net.apply(init_weights)  # 对网络进行初始化
-    feature_net.to(device)
-    classifier.apply(init_weights)  # 对网络进行初始化
-    classifier.to(device)
+    cnn_feature_net.apply(init_weights)  # 对网络进行初始化
+    cnn_feature_net.to(device)
+    transformer_feature_net.apply(init_weights)  # 对网络进行初始化
+    transformer_feature_net.to(device)
+    cnn_feature_net.apply(init_weights)  # 对网络进行初始化
+    cnn_feature_net.to(device)
+    classifier4cnn.apply(init_weights)  # 对网络进行初始化
+    classifier4cnn.to(device)
+    classifier4transformer.apply(init_weights)  # 对网络进行初始化
+    classifier4transformer.to(device)
+    classifier4merge.apply(init_weights)  # 对网络进行初始化
+    classifier4merge.to(device)
     discriminator.apply(init_weights)  # 对网络进行初始化
     discriminator.to(device)
-    return feature_net, classifier, discriminator
+    return (
+        cnn_feature_net,
+        transformer_feature_net,
+        classifier4cnn,
+        classifier4transformer,
+        classifier4merge,
+        discriminator,
+    )
 
 
-def load_model(args):
-    device = args.device
-    # Initialize network instances
-    feature_net = CnnFeatureNet(args.sample_length, args.channels)
-    classifier = Classifier(args.num_classes)
+# def load_model(args):
+#     device = args.device
+#     # Initialize network instances
+#     feature_net = CnnFeatureNet(args.sample_length, args.channels)
+#     classifier = Classifier(args.num_classes)
 
-    # Load saved model parameters
-    checkpoint = torch.load(args.model_path)
-    feature_net.load_state_dict(checkpoint["feature_net"])
-    classifier.load_state_dict(checkpoint["classifier"])
+#     # Load saved model parameters
+#     checkpoint = torch.load(args.model_path)
+#     feature_net.load_state_dict(checkpoint["feature_net"])
+#     classifier.load_state_dict(checkpoint["classifier"])
 
-    # Move models to the desired device
-    feature_net.to(device)
-    classifier.to(device)
+#     # Move models to the desired device
+#     feature_net.to(device)
+#     classifier.to(device)
 
-    return feature_net, classifier
+#     return feature_net, classifier

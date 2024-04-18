@@ -64,7 +64,8 @@ def plot_sne(data, labels, savepath=""):
 
     plt.tight_layout()
     plt.savefig(savepath, bbox_inches="tight")
-    # plt.show()()
+    # plt.show()
+    plt.close()
 
 
 def plot(data, labels):

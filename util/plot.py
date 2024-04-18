@@ -243,6 +243,7 @@ def draw_matrix(predict, labels, classes, save_path):
     plt.xlabel("Predicted Labels")
     plt.ylabel("True Labels")
     plt.savefig(save_path, bbox_inches="tight")
+    plt.close()
     # plt.show()()
 
 

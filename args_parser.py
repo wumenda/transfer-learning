@@ -10,7 +10,7 @@ def list_type(arg):
 
 def get_args_parser():
     parser = argparse.ArgumentParser("Set transformer detector", add_help=False)
-    parser.add_argument("--lr", default=1e-2, type=float)
+    parser.add_argument("--lr", default=1e-3, type=float)
     parser.add_argument("--batch_size", default=128, type=int)
     # parser.add_argument("--weight_decay", default=1e-4, type=float)
     parser.add_argument("--epochs", default=100, type=int)
@@ -30,8 +30,8 @@ def get_args_parser():
     parser.add_argument("--task", type=str, default=r"0-3")
     parser.add_argument("--num_classes", type=int, default=10)
     parser.add_argument("--sample_length", type=int, default=1024)
-    parser.add_argument("--sample_num", type=int, default=400)
-    parser.add_argument("--rate", type=list_type, default=[0.7, 0.3])
+    parser.add_argument("--sample_num", type=int, default=240)
+    parser.add_argument("--rate", type=float, default=0.7)
     parser.add_argument("--feature", type=str, default="de")
     parser.add_argument("--channels", type=int, default=1)
     parser.add_argument("--fft", type=bool, default=True)
@@ -41,6 +41,11 @@ def get_args_parser():
         "--output_dir",
         default=f"output/{day_time}",
         help="path where to save, empty for no saving",
+    )
+    parser.add_argument(
+        "--acc_result",
+        default=f"result",
+        help="path where to save",
     )
     parser.add_argument(
         "--figure_path",
@@ -63,13 +68,13 @@ def get_args_parser():
     parser.add_argument(
         "--steps",
         type=str,
-        default="30, 120",
+        default="150, 900",
         help="the learning rate decay for step and stepLR",
     )
     parser.add_argument(
         "--gamma",
         type=float,
-        default=0.8,
+        default=0.1,
         help="learning rate scheduler parameter for step and exp",
     )
     return parser

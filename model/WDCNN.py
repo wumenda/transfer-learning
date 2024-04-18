@@ -1,6 +1,145 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import math
+
+
+class CnnFeatureNet(nn.Module):
+    def __init__(self, input_size, channels):
+        super(CnnFeatureNet, self).__init__()
+        self.cbrp1 = nn.Sequential(
+            nn.Conv1d(channels, 16, kernel_size=64, stride=16, padding=24),
+            nn.BatchNorm1d(16),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+        )
+        self.cbrp2 = nn.Sequential(
+            nn.Conv1d(16, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+        )
+        self.cbrp3 = nn.Sequential(
+            nn.Conv1d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+        )
+        self.cbrp4 = nn.Sequential(
+            nn.Conv1d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+        )
+        self.cbrp5 = nn.Sequential(
+            nn.Conv1d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+        )
+        self.mlp = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(input_size // 8, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x):
+        x = self.cbrp1(x)
+        x = self.cbrp2(x)
+        x = self.cbrp3(x)
+        x = self.cbrp4(x)
+        x = self.cbrp5(x)
+        logits = self.mlp(x)
+        return logits
+
+
+class TransformerNet(nn.Module):
+    def __init__(
+        self,
+        input_size,
+        channels,
+        transformer_layers=4,
+        transformer_dim=128,
+        transformer_heads=8,
+    ):
+        super(TransformerNet, self).__init__()
+
+        self.transformer_dim = transformer_dim
+        self.positional_encoding = self.generate_positional_encoding(
+            input_size, transformer_dim
+        )
+        self.transformer_layer = nn.TransformerEncoderLayer(
+            d_model=transformer_dim, dim_feedforward=256, nhead=transformer_heads
+        )
+        self.transformer = nn.TransformerEncoder(
+            self.transformer_layer, num_layers=transformer_layers
+        )
+        self.mlp = nn.Sequential(
+            nn.Linear(self.transformer_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Sigmoid(),
+        )
+
+        # 添加一个新的向量作为输入
+        self.new_vector = nn.Parameter(torch.zeros(1, 1, transformer_dim))
+
+    def forward(self, x):
+        batch_size, channels, length = x.size()
+        seq_length = length // self.transformer_dim
+        x = x.view(
+            batch_size, seq_length, self.transformer_dim
+        )  # 调整输入维度顺序以适应Transformer
+        # 在输入序列的最前面添加新的向量
+        new_vector = self.new_vector.expand(batch_size, 1, self.transformer_dim)
+        x = torch.cat([new_vector, x], dim=1)
+        x = x + self.positional_encoding[: seq_length + 1, :].unsqueeze(0).expand(
+            batch_size, -1, -1
+        )  # 添加位置编码
+        x = x.permute(
+            1, 0, 2
+        )  # Transformer要求输入形状为(seq_length, batch_size, embedding_dim)
+        y = self.transformer(x)
+        feature_vector = y[0]
+        logits = self.mlp(feature_vector)
+        return logits
+
+    def generate_positional_encoding(self, input_size, d_model):
+        position = torch.arange(0, input_size).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2) * -(math.log(1000.0) / d_model)
+        )
+        positional_encoding = torch.zeros(input_size, d_model)
+        positional_encoding[:, 0::2] = torch.sin(position * div_term)
+        positional_encoding[:, 1::2] = torch.cos(position * div_term)
+        return positional_encoding.to("cuda")
+
+
+class TransformerWithConv(nn.Module):
+    def __init__(
+        self,
+        num_classes,
+        input_size,
+        channels,
+    ):
+        super(TransformerWithConv, self).__init__()
+
+        self.conv = CnnFeatureNet(input_size, channels)
+        self.transformer = TransformerNet(input_size, channels)
+        self.head = nn.Sequential(
+            nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, num_classes)
+        )
+
+    def forward(self, x):
+        feature_cnn = self.conv(x)
+        feature_transformer = self.transformer(x)
+        logits = torch.cat([feature_cnn, feature_transformer], dim=-1)
+        output = self.head(logits)
+        return logits, output
 
 
 class Wdcnn(nn.Module):
@@ -36,12 +175,15 @@ class Wdcnn(nn.Module):
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2, stride=2),
         )
+        self.dropout = nn.Dropout(p=0.5)
         self.mlp = nn.Sequential(
             nn.Flatten(),
             nn.Linear(input_size // 8, 64),
             nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
         )
-        self.head = nn.Sequential(nn.Linear(64, num_classes))
+        self.head = nn.Sequential(nn.Linear(32, num_classes))
 
     def forward(self, x):
         x = self.cbrp1(x)
@@ -317,7 +459,7 @@ def init_weights(m):
 
 def build_model(args):
     device = torch.device(args.device)
-    model = Wdcnn(args.num_classes, args.sample_length, args.channels)
+    model = TransformerWithConv(args.num_classes, args.sample_length, args.channels)
     model.apply(init_weights)  # 对网络进行初始化
     model.to(device)
     return model

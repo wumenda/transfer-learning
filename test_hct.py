@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data.cwru import build_transfer_task
-from engine import evaluate_gan, train_one_epoch_on_gan_with_mmd
-from model.GAN import build_model
+from engine import evaluate_on_hct, train_one_epoch_on_hct
+from model.HCT import build_model
 from util.criterion import create_optimizer
 from util.mectric import ExcelWriter
 from util.model_save import save_model
@@ -39,10 +39,20 @@ def main(args):
     random.seed(seed)
     # =================================================================
     # 模型
-    feature_net, classifier, discriminator = build_model(args)
+    (
+        cnn_feature_net,
+        transformer_feature_net,
+        classifier4cnn,
+        classifier4transformer,
+        classifier4merge,
+        discriminator,
+    ) = build_model(args)
     parameter_list = [
-        {"params": feature_net.parameters(), "lr": 0.5 * args.lr},
-        {"params": classifier.parameters(), "lr": 1 * args.lr},
+        {"params": cnn_feature_net.parameters(), "lr": 1 * args.lr},
+        {"params": transformer_feature_net.parameters(), "lr": 1 * args.lr},
+        {"params": classifier4cnn.parameters(), "lr": 1 * args.lr},
+        {"params": classifier4transformer.parameters(), "lr": 1 * args.lr},
+        {"params": classifier4merge.parameters(), "lr": 1 * args.lr},
         {"params": discriminator.parameters(), "lr": 1 * args.lr},
     ]
     # Define optimizer and learning rate decay
@@ -66,57 +76,65 @@ def main(args):
     target_val_loader = DataLoader(
         dataset=target_val_set, batch_size=len(target_val_set), shuffle=False
     )
+
     # =================================================================
     # 开始训练
     acc_lists, losses_lists, cls_loss_lists, adver_loss_lists = [], [], [], []
     for epoch in tqdm(range(args.start_epoch, args.epochs)):
         # 训练
-        acc_list, losses_list, cls_loss_list, adver_loss_list = (
-            train_one_epoch_on_gan_with_mmd(
-                feature_net,
-                classifier,
-                discriminator,
-                cls_criterion,
-                adver_criterion,
-                source_train_loader,
-                target_train_loader,
-                optimizer,
-                device,
-                epoch,
-                args.clip_max_norm,
-            )
+        acc_list, losses_list, cls_loss_list, adver_loss_list = train_one_epoch_on_hct(
+            cnn_feature_net,
+            transformer_feature_net,
+            classifier4cnn,
+            classifier4transformer,
+            classifier4merge,
+            discriminator,
+            cls_criterion,
+            adver_criterion,
+            source_train_loader,
+            target_train_loader,
+            optimizer,
+            device,
+            epoch,
+            args.clip_max_norm,
         )
         acc_lists.extend(acc_list)
         losses_lists.extend(losses_list)
         cls_loss_lists.extend(cls_loss_list)
         adver_loss_lists.extend(adver_loss_list)
     # 验证准确率 6个图
-    source_acc = evaluate_gan(
-        feature_net,
-        classifier,
+    source_acc = evaluate_on_hct(
+        cnn_feature_net,
+        transformer_feature_net,
+        classifier4cnn,
+        classifier4transformer,
+        classifier4merge,
         source_val_loader,
         device,
-        os.path.join(args.figure_path, "source-matrix-gan-mmd"),
-        os.path.join(args.figure_path, "source-tsne-gan-mmd"),
+        os.path.join(args.figure_path, "source-matrix-hct"),
+        os.path.join(args.figure_path, "source-tsne-hct"),
     )
-    target_acc = evaluate_gan(
-        feature_net,
-        classifier,
+    target_acc = evaluate_on_hct(
+        cnn_feature_net,
+        transformer_feature_net,
+        classifier4cnn,
+        classifier4transformer,
+        classifier4merge,
         target_val_loader,
         device,
-        os.path.join(args.figure_path, "target-matrix-gan-mmd"),
-        os.path.join(args.figure_path, "target-tsne-gan-mmd"),
+        os.path.join(args.figure_path, "target-matrix-hct"),
+        os.path.join(args.figure_path, "target-tsne-hct"),
     )
     plot_curve(
         acc_lists,
-        os.path.join(args.figure_path, "gan-mmd-acc"),
+        os.path.join(args.figure_path, "hct-acc"),
         title="accuracy ",
         xlabel="X",
         ylabel="Y",
     )
     plot_curve(
         losses_lists,
-        os.path.join(args.figure_path, "gan-mmd-loss"),
+        os.path.join(args.figure_path, "hct-loss"),
         title="loss",
         xlabel="X",
         ylabel="Y",
@@ -128,8 +146,11 @@ def main(args):
     # 保存
     torch.save(
         {
-            "feature_net": feature_net.state_dict(),
-            "classifier": classifier.state_dict(),
+            "cnn_feature_net": cnn_feature_net.state_dict(),
+            "transformer_feature_net": transformer_feature_net.state_dict(),
+            "classifier4cnn": classifier4cnn.state_dict(),
+            "classifier4transformer": classifier4transformer.state_dict(),
+            "classifier4merge": classifier4merge.state_dict(),
         },
         os.path.join(args.save_dir, day_time + ".pth"),
     )
@@ -173,12 +194,12 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
-    args.figure_path = "figure/gan-mmd"
-    args.acc_result = "result/gan-mmd"
+    args.figure_path = "figure/hct"
+    args.acc_result = "result/hct"
     args.lr = 1e-3
     args.batch_size = 128
-    args.epochs = 200
-    args.fft = True
+    args.epochs = 100
+    args.fft = False
     acc = main(args)
     with open(os.path.join(args.acc_result, "acc.txt"), "a") as f:
         # 重定向 print 的输出到文件

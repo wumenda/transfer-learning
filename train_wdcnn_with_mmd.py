@@ -76,6 +76,7 @@ def main(args):
                 optimizer,
                 device,
                 epoch,
+                lr_scheduler,
                 args.clip_max_norm,
             )
         )
@@ -159,7 +160,11 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
+    args.epochs = 200
+    args.figure_path = "figure/wdcnn-mmd"
+    args.acc_result = "result/wdcnn-mmd"
+    args.fft = True
     acc = main(args)
-    with open("output.txt", "a") as f:
+    with open(os.path.join(args.acc_result, "acc.txt"), "a") as f:
         # 重定向 print 的输出到文件
-        print(f"wdcnn-mmd-{args.task}:{acc}", file=f)
+        print(f"{acc}", file=f)

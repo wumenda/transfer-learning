@@ -11,9 +11,9 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from data.cwru.cwru import build_dataset, build_test
+from data.cwru import build_dataset, build_test
 from engine import evaluate, train_one_epoch, evaluate_without_plot
-from model.WDCNN import build_model
+from model.Transformer import build_model
 from util.criterion import create_optimizer
 from util.mectric import ExcelWriter
 from util.model_save import save_model
@@ -111,8 +111,9 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
-    args.figure_path = "figure/wdcnn"
+    args.figure_path = "figure/Transformer"
     args.epochs = 200
     args.fft = True
+    args.lr = 1e-3
     for i in range(1):
         main(args)

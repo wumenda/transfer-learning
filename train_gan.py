@@ -177,7 +177,12 @@ if __name__ == "__main__":
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
     args.figure_path = "figure/gan"
+    args.acc_result = "result/gan"
+    args.lr = 1e-3
+    args.batch_size = 128
+    args.epochs = 200
+    args.fft = False
     acc = main(args)
-    with open("output.txt", "a") as f:
+    with open(os.path.join(args.acc_result, "acc.txt"), "a") as f:
         # 重定向 print 的输出到文件
-        print(f"gan-{args.task}:{acc}", file=f)
+        print(f"{acc}", file=f)
