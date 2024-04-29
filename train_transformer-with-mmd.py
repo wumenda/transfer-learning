@@ -161,11 +161,12 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
-    args.figure_path = "figure/Transformer"
+    args.figure_path = "figure/Transformer-fft"
     args.lr = 1e-4
     args.batch_size = 128
     args.epochs = 200
-    args.fft = False
+    args.fft = True
+    args.rate = [0.7, 0.3]
     acc = main(args)
     # with open("output.txt", "a") as f:
     #     # 重定向 print 的输出到文件

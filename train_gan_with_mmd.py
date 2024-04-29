@@ -96,27 +96,27 @@ def main(args):
         classifier,
         source_val_loader,
         device,
-        os.path.join(args.figure_path, "source-matrix-gan-mmd"),
-        os.path.join(args.figure_path, "source-tsne-gan-mmd"),
+        os.path.join(args.figure_path, "source-matrix-gan-mmd-w"),
+        os.path.join(args.figure_path, "source-tsne-gan-mmd-w"),
     )
     target_acc = evaluate_gan(
         feature_net,
         classifier,
         target_val_loader,
         device,
-        os.path.join(args.figure_path, "target-matrix-gan-mmd"),
-        os.path.join(args.figure_path, "target-tsne-gan-mmd"),
+        os.path.join(args.figure_path, "target-matrix-gan-mmd-w"),
+        os.path.join(args.figure_path, "target-tsne-gan-mmd-w"),
     )
     plot_curve(
         acc_lists,
-        os.path.join(args.figure_path, "gan-mmd-acc"),
+        os.path.join(args.figure_path, "gan-mmd-w-acc"),
         title="accuracy ",
         xlabel="X",
         ylabel="Y",
     )
     plot_curve(
         losses_lists,
-        os.path.join(args.figure_path, "gan-mmd-loss"),
+        os.path.join(args.figure_path, "gan-mmd-w-loss"),
         title="loss",
         xlabel="X",
         ylabel="Y",
@@ -173,12 +173,13 @@ if __name__ == "__main__":
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
-    args.figure_path = "figure/gan-mmd"
-    args.acc_result = "result/gan-mmd"
+    args.figure_path = "figure/gan-mmd-w"
+    args.acc_result = "result/gan-mmd-w"
     args.lr = 1e-3
-    args.batch_size = 128
-    args.epochs = 200
+    args.batch_size = 512
+    args.epochs = 400
     args.fft = True
+    args.rate = [0.7, 0.3]
     acc = main(args)
     with open(os.path.join(args.acc_result, "acc.txt"), "a") as f:
         # 重定向 print 的输出到文件

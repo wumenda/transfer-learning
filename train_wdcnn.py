@@ -112,7 +112,7 @@ if __name__ == "__main__":
     if args.save_dir:
         Path(args.save_dir).mkdir(parents=True, exist_ok=True)
     args.figure_path = "figure/wdcnn"
-    args.epochs = 200
+    args.epochs = 100
     args.fft = True
     for i in range(1):
         main(args)

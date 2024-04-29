@@ -219,7 +219,7 @@ def init_weights(m):
 
 def build_model(args):
     device = torch.device(args.device)
-    feature_net = CnnFeatureNet(args.sample_length, args.channels)
+    feature_net = TransformerNet(args.sample_length, args.channels)
     classifier = Classifier(
         args.num_classes,
     )
@@ -236,7 +236,7 @@ def build_model(args):
 def load_model(args):
     device = args.device
     # Initialize network instances
-    feature_net = CnnFeatureNet(args.sample_length, args.channels)
+    feature_net = TransformerNet(args.sample_length, args.channels)
     classifier = Classifier(args.num_classes)
 
     # Load saved model parameters

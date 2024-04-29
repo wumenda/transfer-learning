@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
-from .cwru import build_transfer_task
-from .cwru import __cwru_class__
+from .cwru2 import build_transfer_task
+from .cwru2 import _fault_type_
 
 
 def transfer_task_time_fft(args):

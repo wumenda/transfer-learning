@@ -16,7 +16,7 @@ from criterion import MK_MMD, domain_adaptation_loss_mmd, mmd_rbf, coral
 from util.mectric import accuracy
 from util.plot import draw_matrix
 from util.t_sne import plot_sne
-from data.cwru import __cwru_class__
+from data.cwru import _fault_type_
 
 
 def train_one_epoch(
@@ -68,7 +68,7 @@ def evaluate(model, data_loader, device, matrix_Savepath, tsne_savepath):
         feature, outputs = model(samples)
         _, predict = torch.max(outputs.cpu(), 1)
         target_acc = accuracy(outputs, targets)
-        draw_matrix(predict, targets.cpu(), __cwru_class__, matrix_Savepath)
+        draw_matrix(predict, targets.cpu(), _fault_type_, matrix_Savepath)
         plot_sne(feature.cpu().numpy(), targets.cpu().numpy(), tsne_savepath)
     return target_acc
 
@@ -424,7 +424,7 @@ def evaluate_gan(
         feature = feature_net(samples)
         outputs = classifier(feature)
         _, predict = torch.max(outputs.cpu(), 1)
-        draw_matrix(predict, targets.cpu(), __cwru_class__, matrix_Savepath)
+        draw_matrix(predict, targets.cpu(), _fault_type_, matrix_Savepath)
         plot_sne(feature.cpu().numpy(), targets.cpu().numpy(), tsne_savepath)
         acc = accuracy(outputs, targets)
     return acc
@@ -481,6 +481,10 @@ def train_one_epoch_on_hct(
         source_labels_fft = source_labels_fft.to(device)
         target_data_fft = target_data_fft.to(device)
         target_labels_fft = target_labels_fft.to(device)
+        # source_labels_fft = source_labels.to(device)
+        # target_labels_fft = target_labels.to(device)
+        # source_data_fft = torch.abs(torch.fft.fft(source_data, dim=-1))
+        # target_data_fft = torch.abs(torch.fft.fft(target_data, dim=-1))
 
         # cnn分支
         source_logits_cnn = cnn_feature_net(source_data_fft)
@@ -508,6 +512,8 @@ def train_one_epoch_on_hct(
         target_logits_merge = torch.cat(
             (target_logits_cnn, target_logits_transformer), dim=-1
         )
+        output_merge_target = classifier4merge(target_logits_merge)
+        output_cnn_target = classifier4cnn(target_logits_cnn)
         domain_outputs = discriminator(
             torch.cat((source_logits_merge, target_logits_merge), dim=0)
         )
@@ -517,9 +523,8 @@ def train_one_epoch_on_hct(
 
         optimizer.zero_grad()
         # 计算总体损失
-        losses = (
-            cls_loss_cnn + cls_loss_transformer + cls_loss_merge + adver_loss + mmd_loss
-        )
+        losses = cls_loss_cnn + cls_loss_transformer + adver_loss + mmd_loss
+
         # 反向传播和优化
         if not math.isfinite(losses):
             print(f"Loss is :{losses}, stopping training")
@@ -527,9 +532,10 @@ def train_one_epoch_on_hct(
         losses.backward()
         optimizer.step()
         # 记录损失和准确率
-        acc = accuracy(output_merge, source_labels_fft)
-        acc_list.append(acc)  # 将准确率记录下来
-        losses_list.append(losses.cpu().item())
+        acc_target = accuracy(output_cnn_target, target_labels_fft)
+        loss_target = cls_criterion(output_cnn_target, target_labels_fft)
+        acc_list.append(acc_target)  # 将准确率记录下来
+        losses_list.append(loss_target.cpu().item())
         cls_loss_list.append(cls_loss_merge.cpu().item())
         adver_loss_list.append(adver_loss.cpu().item())
     return acc_list, losses_list, cls_loss_list, adver_loss_list
@@ -551,13 +557,14 @@ def evaluate_merge(
     for i, (samples, targets) in enumerate(data_loader):
         targets = targets.to(device)
         samples = samples.to(device)
+        samples_fft = torch.abs(torch.fft.fft(samples, dim=-1))
         feature_cnn = cnn_feature_net(samples)
         feature_transformer = transformer_feature_net(samples)
         outputs_merge = classifier4merge(
             torch.cat((feature_cnn, feature_transformer), dim=-1)
         )
         _, predict = torch.max(outputs_merge.cpu(), 1)
-        draw_matrix(predict, targets.cpu(), __cwru_class__, matrix_Savepath)
+        draw_matrix(predict, targets.cpu(), _fault_type_, matrix_Savepath)
         plot_sne(feature_cnn.cpu().numpy(), targets.cpu().numpy(), tsne_savepath)
         acc = accuracy(outputs_merge, targets)
     return acc
@@ -583,6 +590,7 @@ def evaluate_fusion(
     for i, (samples, targets) in enumerate(data_loader):
         targets = targets.to(device)
         samples = samples.to(device)
+        samples_fft = torch.abs(torch.fft.fft(samples, dim=-1))
         feature_cnn = cnn_feature_net(samples)
         out_cnn = classifier4cnn(feature_cnn)
         feature_transformer = transformer_feature_net(samples)
@@ -601,7 +609,16 @@ def evaluate_fusion(
             + outputs_merge * weights[2]
         )
         _, predict = torch.max(weighted_avg.cpu(), 1)
-        draw_matrix(predict, targets.cpu(), __cwru_class__, matrix_Savepath)
+        draw_matrix(predict, targets.cpu(), _fault_type_, matrix_Savepath)
         plot_sne(feature_cnn.cpu().numpy(), targets.cpu().numpy(), tsne_savepath)
         acc = accuracy(outputs_merge, targets)
     return acc
+
+
+# 权重衰减
+def calc_coeff(iter_num, high=1.0, low=0.0, alpha=10.0, max_iter=10000.0):
+    return np.float64(
+        2.0 * (high - low) / (1.0 + np.exp(-alpha * iter_num / max_iter))
+        - (high - low)
+        + low
+    )

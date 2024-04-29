@@ -140,76 +140,76 @@ def main(args):
     print("\033[0m源域验证准确率:", source_acc)
     print("\033[1;31m目标域验证准确率:", target_acc)
 
-    # 验证transformer分支
-    print("\033[0m验证transformer分支:")
-    source_acc = evaluate_gan(
-        transformer_feature_net,
-        classifier4transformer,
-        source_val_loader_fft,
-        device,
-        os.path.join(args.figure_path, "source-matrix-hct"),
-        os.path.join(args.figure_path, "source-tsne-hct"),
-    )
-    target_acc = evaluate_gan(
-        transformer_feature_net,
-        classifier4transformer,
-        target_val_loader_fft,
-        device,
-        os.path.join(args.figure_path, "target-matrix-hct"),
-        os.path.join(args.figure_path, "target-tsne-hct"),
-    )
-    print("\033[0m源域验证准确率:", source_acc)
-    print("\033[1;31m目标域验证准确率:", target_acc)
+    # # 验证transformer分支
+    # print("\033[0m验证transformer分支:")
+    # source_acc = evaluate_gan(
+    #     transformer_feature_net,
+    #     classifier4transformer,
+    #     source_val_loader_fft,
+    #     device,
+    #     os.path.join(args.figure_path, "source-matrix-hct"),
+    #     os.path.join(args.figure_path, "source-tsne-hct"),
+    # )
+    # target_acc = evaluate_gan(
+    #     transformer_feature_net,
+    #     classifier4transformer,
+    #     target_val_loader_fft,
+    #     device,
+    #     os.path.join(args.figure_path, "target-matrix-hct"),
+    #     os.path.join(args.figure_path, "target-tsne-hct"),
+    # )
+    # print("\033[0m源域验证准确率:", source_acc)
+    # print("\033[1;31m目标域验证准确率:", target_acc)
 
-    # 验证merge分支
-    print("\033[0m验证merge分支:")
-    source_acc = evaluate_merge(
-        cnn_feature_net,
-        transformer_feature_net,
-        classifier4merge,
-        source_val_loader_fft,
-        device,
-        os.path.join(args.figure_path, "source-matrix-hct"),
-        os.path.join(args.figure_path, "source-tsne-hct"),
-    )
-    target_acc = evaluate_merge(
-        cnn_feature_net,
-        transformer_feature_net,
-        classifier4merge,
-        target_val_loader_fft,
-        device,
-        os.path.join(args.figure_path, "target-matrix-hct"),
-        os.path.join(args.figure_path, "target-tsne-hct"),
-    )
-    print("\033[0m源域验证准确率:", source_acc)
-    print("\033[1;31m目标域验证准确率:", target_acc)
+    # # 验证merge分支
+    # print("\033[0m验证merge分支:")
+    # source_acc = evaluate_merge(
+    #     cnn_feature_net,
+    #     transformer_feature_net,
+    #     classifier4merge,
+    #     source_val_loader_fft,
+    #     device,
+    #     os.path.join(args.figure_path, "source-matrix-hct"),
+    #     os.path.join(args.figure_path, "source-tsne-hct"),
+    # )
+    # target_acc = evaluate_merge(
+    #     cnn_feature_net,
+    #     transformer_feature_net,
+    #     classifier4merge,
+    #     target_val_loader_fft,
+    #     device,
+    #     os.path.join(args.figure_path, "target-matrix-hct"),
+    #     os.path.join(args.figure_path, "target-tsne-hct"),
+    # )
+    # print("\033[0m源域验证准确率:", source_acc)
+    # print("\033[1;31m目标域验证准确率:", target_acc)
 
-    # 验证hct算法
-    print("\033[0m验证hct算法:")
-    source_acc = evaluate_fusion(
-        cnn_feature_net,
-        classifier4cnn,
-        transformer_feature_net,
-        classifier4transformer,
-        classifier4merge,
-        source_val_loader_fft,
-        device,
-        os.path.join(args.figure_path, "source-matrix-hct"),
-        os.path.join(args.figure_path, "source-tsne-hct"),
-    )
-    target_acc = evaluate_fusion(
-        cnn_feature_net,
-        classifier4cnn,
-        transformer_feature_net,
-        classifier4transformer,
-        classifier4merge,
-        target_val_loader_fft,
-        device,
-        os.path.join(args.figure_path, "target-matrix-hct"),
-        os.path.join(args.figure_path, "target-tsne-hct"),
-    )
-    print("\033[0m源域验证准确率:", source_acc)
-    print("\033[1;31m目标域验证准确率:", target_acc)
+    # # 验证hct算法
+    # print("\033[0m验证hct算法:")
+    # source_acc = evaluate_fusion(
+    #     cnn_feature_net,
+    #     classifier4cnn,
+    #     transformer_feature_net,
+    #     classifier4transformer,
+    #     classifier4merge,
+    #     source_val_loader_fft,
+    #     device,
+    #     os.path.join(args.figure_path, "source-matrix-hct"),
+    #     os.path.join(args.figure_path, "source-tsne-hct"),
+    # )
+    # target_acc = evaluate_fusion(
+    #     cnn_feature_net,
+    #     classifier4cnn,
+    #     transformer_feature_net,
+    #     classifier4transformer,
+    #     classifier4merge,
+    #     target_val_loader_fft,
+    #     device,
+    #     os.path.join(args.figure_path, "target-matrix-hct"),
+    #     os.path.join(args.figure_path, "target-tsne-hct"),
+    # )
+    # print("\033[0m源域验证准确率:", source_acc)
+    # print("\033[1;31m目标域验证准确率:", target_acc)
 
     # =================================================================
     # 保存
@@ -266,9 +266,10 @@ if __name__ == "__main__":
     args.figure_path = "figure/hct"
     args.acc_result = "result/hct"
     args.lr = 1e-3
-    args.batch_size = 128
+    args.batch_size = 512
     args.epochs = 400
     args.fft = False
+    args.rate = [0.7, 0.3]
     acc = main(args)
     with open(os.path.join(args.acc_result, "acc.txt"), "a") as f:
         # 重定向 print 的输出到文件

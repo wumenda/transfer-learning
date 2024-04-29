@@ -3,10 +3,11 @@ import torch
 from scipy.io import loadmat
 from torch.utils.data import Dataset, TensorDataset, random_split
 from tqdm import tqdm
+from sklearn.preprocessing import StandardScaler
 
 from util.transforms import compute_fft
 
-__cwru_class__ = ["N", "F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"]
+_fault_type_ = ["N", "F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"]
 
 
 class Cwru:
@@ -26,6 +27,7 @@ class Cwru:
         self.rate = 0.7
         self.feature = feature
         self.fft = fft
+        self.scaler = StandardScaler()
         self.dataset_train, self.dataset_val = self.get_data(root)
 
     @staticmethod
@@ -77,11 +79,15 @@ class Cwru:
             slice_data = data[:, start:end]
             if self.fft is True:
                 slice_data = torch.fft.fft(slice_data, dim=1)
-            slice_data_abs = torch.abs(slice_data)
+                slice_data = torch.abs(slice_data)
+                # slice_data = self.scaler.fit_transform(
+                #     slice_data.reshape(-1, 1)
+                # ).reshape(1, -1)
+                # slice_data = torch.tensor(slice_data, dtype=torch.float32)
             if i < sample_num * self.rate:
-                slice_datas_train.append(slice_data_abs)
+                slice_datas_train.append(slice_data)
             else:
-                slice_datas_val.append(slice_data_abs)
+                slice_datas_val.append(slice_data)
             start, end = start + interval, end + interval
         # 将切片后的数据转换为张量形式
         train_sample = torch.stack(slice_datas_train)
@@ -108,9 +114,6 @@ class Cwru:
         return TensorDataset(samples_train, labels_train), TensorDataset(
             samples_val, labels_val
         )
-
-    # def divide_set(self):
-    #     return random_split(self.dataset, self.rate)
 
     @property
     def one_hot_matrix(self):
